@@ -1,852 +1,105 @@
-<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  
-  <meta property="og:title" content="신동윤 · 신지연 결혼식에 초대합니다" />
-  <meta property="og:description" content="2026년 5월 23일 저녁 6시 30분, 남산예술원 웨딩홀" />
-  <meta property="og:image" content="https://indisohari.github.io/invitation-v2/main.jpg" />
-  <meta property="og:type" content="website" />
+const SPREADSHEET_ID = "여기에_스프레드시트_ID를_넣으세요";
+const SHEET_NAME = "responses";
 
-  <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+/**
+ * 선택: 브라우저에서 열었을 때 상태 확인용
+ */
+function doGet() {
+  return jsonOutput_({
+    success: true,
+    message: "RSVP endpoint is running",
+    time: new Date().toISOString()
+  });
+}
 
-  <style>
-    :root { --bg-color: #ffffff; --text-main: #1a1a1a; --text-sub: #555; --accent: #8c5b5b; --line: #e0e0e0; }
-
-    html, body {
-      margin: 0; padding: 0; width: 100%;
-      background: #f9f9f9;
-      font-family: 'Noto Sans KR', sans-serif;
-      color: var(--text-main);
-      -webkit-font-smoothing: antialiased;
-      scroll-behavior: smooth;
+/**
+ * RSVP 저장
+ * 프론트에서 text/plain(JSON 문자열)로 전송
+ */
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return jsonOutput_({ success: false, message: "요청 본문이 비어 있습니다." });
     }
 
-    body { padding-bottom: env(safe-area-inset-bottom); }
+    const raw = e.postData.contents;
+    let payload;
 
-    .wrap {
-      max-width: 500px;
-      margin: 0 auto;
-      background: #fff;
-      padding-bottom: 120px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.02);
-      min-height: 100vh;
+    try {
+      payload = JSON.parse(raw);
+    } catch (parseErr) {
+      return jsonOutput_({ success: false, message: "JSON 파싱 실패" });
     }
 
-    section { padding: 60px 25px; text-align: center; }
+    const name = String(payload.name || "").trim();
+    const phone = String(payload.phone || "").trim();
+    const side = String(payload.side || "").trim();
+    const guestCount = Number(payload.guestCount || 0);
+    const guestCountLabel = String(payload.guestCountLabel || "").trim();
+    const companionNames = String(payload.companionNames || "").trim();
 
-    .fade-in { opacity: 0; transform: translateY(20px); transition: all 1s ease; }
-    .fade-in.visible { opacity: 1; transform: translateY(0); }
-    @media (prefers-reduced-motion: reduce) { .fade-in { transition: none; opacity: 1; transform: none; } }
-
-    .font-serif { font-family: 'Nanum Myeongjo', serif; }
-    .section-label { font-size: 11px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; display: block; font-weight: 700; }
-    .section-label-ko { font-size: 12px; color: var(--accent); letter-spacing: 0.5px; margin-bottom: 15px; display: block; font-weight: 700; }
-
-    .hero { padding: 0 0 50px; }
-    .hero-text-area { padding-top: 70px; padding-bottom: 40px; }
-    .date-text { font-size: 15px; letter-spacing: 3px; color: var(--accent); margin-bottom: 20px; font-weight: 700; }
-    .names { font-size: 26px; margin-bottom: 10px; letter-spacing: 2px; line-height: 1.4; color: #111; }
-
-    .main-photo-frame { width: 100%; margin: 0; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px; }
-    .main-photo {
-      width: 100%; height: 100%; display: block;
-      object-fit: cover; object-position: 50% 65%;
-      filter: brightness(1.05) contrast(1.02) sepia(0.08) saturate(0.9);
-      transition: filter 0.3s ease;
+    // 서버측 검증 (프론트 검증만 믿지 않기)
+    if (!name) return jsonOutput_({ success: false, message: "성함이 필요합니다." });
+    if (!/^01[016789]-\d{3,4}-\d{4}$/.test(phone)) {
+      return jsonOutput_({ success: false, message: "연락처 형식이 올바르지 않습니다." });
+    }
+    if (!(side === "신랑측" || side === "신부측")) {
+      return jsonOutput_({ success: false, message: "참석 구분이 올바르지 않습니다." });
+    }
+    if (!guestCount || guestCount < 1) {
+      return jsonOutput_({ success: false, message: "참석 인원이 올바르지 않습니다." });
     }
 
-    .parents-area { display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 40px; padding: 0 10px; box-sizing: border-box; }
-    .parent-row { flex: 1; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-    .parent-row.bride { text-align: left; align-items: flex-start; }
-    .p-names { font-weight: 400; color: #666; font-size: 13px; margin-bottom: 4px; }
-    .relation { color: #999; font-size: 11px; margin-left: 4px; }
-    .me { font-weight: 700; font-size: 17px; color: #111; letter-spacing: 1px;}
-
-    .poem-section { padding-top: 50px; }
-    .poem-wrap { white-space: pre-line; line-height: 2.0; font-size: 15px; color: #333; word-break: keep-all; }
-
-    .info-section { background: #fafafa; padding: 50px 25px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
-    .info-group { margin-bottom: 30px; }
-    .info-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #222; letter-spacing: 0.5px; }
-    .info-desc { font-size: 14px; color: #666; font-weight: 300; margin-bottom: 15px; line-height: 1.6; }
-
-    .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 380px; margin: 0 auto; }
-    .btn-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; max-width: 380px; margin: 0 auto; }
-
-    .btn {
-      padding: 12px 0;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      background: #fff;
-      font-size: 12px;
-      color: #333;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      text-decoration: none;
-      transition: all 0.2s;
-      font-weight: 500;
-      font-family: 'Noto Sans KR';
-    }
-    .btn:active { transform: scale(0.98); background: #f9f9f9; }
-    .btn svg { width: 17px; height: 17px; fill: none !important; stroke: #222; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; vertical-align: middle; margin-right: 2px; }
-    .btn svg path, .btn svg rect, .btn svg polyline, .btn svg line { fill: none !important; stroke: inherit; }
-
-    .divider-line { width: 100%; height: 1px; background: #eee; margin: 30px 0; }
-
-    .venue-notice-list {
-      margin-top: 14px;
-      text-align: left;
-      display: grid;
-      gap: 8px;
-    }
-    .venue-notice-item {
-      font-size: 12px;
-      color: #444;
-      background: #fff;
-      border: 1px solid #eee;
-      border-radius: 6px;
-      padding: 10px 12px;
-      line-height: 1.5;
-      word-break: keep-all;
-    }
-    .venue-notice-item.strong {
-      border-color: #e7d6d6;
-      background: #fffafb;
-      color: #3a2a2a;
-      font-weight: 500;
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) {
+      return jsonOutput_({ success: false, message: "지정한 시트를 찾을 수 없습니다." });
     }
 
-    .route-card {
-      margin-top: 14px;
-      text-align: left;
-      border: 1px solid #ececec;
-      background: #fff;
-      border-radius: 8px;
-      padding: 14px;
-      scroll-margin-top: 16px;
-    }
-    .route-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #222;
-      margin-bottom: 10px;
-    }
-    .route-block + .route-block {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px dashed #eee;
-    }
-    .route-sub {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 6px;
-    }
-    .route-text {
-      font-size: 12px;
-      color: #555;
-      line-height: 1.65;
-      word-break: keep-all;
+    // 첫 행 헤더 없으면 자동 생성 (선택)
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "제출시각",
+        "성함",
+        "휴대폰",
+        "참석구분",
+        "참석인원(숫자)",
+        "참석인원라벨",
+        "동반인성함",
+        "UserAgent"
+      ]);
     }
 
-    .route-map-wrap {
-      margin-top: 12px;
-      border-top: 1px dashed #eee;
-      padding-top: 12px;
-    }
-    .route-map-caption {
-      font-size: 11px;
-      color: #777;
-      margin-bottom: 8px;
-      line-height: 1.5;
-    }
-    .route-map-img {
-      width: 100%;
-      border-radius: 8px;
-      border: 1px solid #eee;
-      display: block;
-      background: #fff;
-    }
+    const userAgent = (e.parameter && e.parameter.ua) ? e.parameter.ua : ""; // 기본 빈값
+    const timestamp = Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss");
 
-    .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
-    .gallery-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; cursor: pointer; display: block; filter: brightness(1.05) contrast(1.02) sepia(0.08) saturate(0.9); }
+    sheet.appendRow([
+      timestamp,
+      name,
+      phone,
+      side,
+      guestCount,
+      guestCountLabel,
+      companionNames,
+      userAgent
+    ]);
 
-    .rsvp-container { background: #fdfdfd; padding: 40px 25px; border: 1px solid #f0f0f0; margin-top: 10px; }
-    .rsvp-input-group { margin-bottom: 30px; text-align: left; }
-    .rsvp-label { font-size: 12px; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+    return jsonOutput_({ success: true, message: "저장 완료" });
 
-    .rsvp-deadline {
-      margin: -24px 0 24px;
-      font-size: 12px;
-      color: #666;
-      line-height: 1.6;
-    }
-    .rsvp-deadline b { color: #333; }
-
-    input, select {
-      width: 100%;
-      padding: 12px 5px;
-      border: none;
-      border-bottom: 1px solid #ddd;
-      background: transparent;
-      font-size: 16px;
-      border-radius: 0;
-      outline: none;
-      font-family: 'Noto Sans KR';
-      color: #333;
-      -webkit-appearance: none;
-    }
-    input:focus, select:focus { border-bottom-color: var(--accent); }
-
-    .btn-submit {
-      width: 100%;
-      padding: 18px;
-      background: #222;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 15px;
-      font-weight: 500;
-      margin-top: 10px;
-      cursor: pointer;
-      letter-spacing: 1px;
-    }
-    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    .privacy-notice {
-      font-size: 11px;
-      color: #999;
-      margin-top: 15px;
-      line-height: 1.55;
-      text-align: center;
-      word-break: keep-all;
-    }
-
-    .account-section { padding-top: 40px; }
-    .acc-header-title { font-family: 'Nanum Myeongjo'; font-size: 18px; margin-bottom: 30px; color: #222; font-weight: 700; line-height: 1.5; }
-    .account-box { margin-bottom: 15px; text-align: left; background: #fdfdfd; border: 1px solid #f5f5f5; padding: 20px; border-radius: 6px; }
-    .acc-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .acc-label { font-size: 12px; color: var(--accent); font-weight: 700; display: block; margin-bottom: 6px; }
-    .acc-info { font-size: 14px; color: #444; line-height: 1.4; }
-    .acc-info b { margin-right: 6px; color: #000; font-size: 15px; }
-    .btn-copy { padding: 6px 14px; border: 1px solid #ddd; background: #fff; font-size: 11px; border-radius: 30px; cursor: pointer; color: #666; white-space: nowrap; }
-
-    .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; }
-    .modal-img { max-width: 100%; max-height: 90%; }
-    .modal-close { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 40px; cursor: pointer; font-weight: 300; z-index: 2001; }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: calc(66px + env(safe-area-inset-bottom));
-      background: rgba(0,0,0,0.85);
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 30px;
-      font-size: 13px;
-      display: none;
-      z-index: 3000;
-      font-weight: 400;
-      width: max-content;
-      max-width: calc(100% - 24px);
-      text-align: center;
-      box-sizing: border-box;
-    }
-
-    .sticky-actions {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: calc(10px + env(safe-area-inset-bottom));
-      width: min(500px, calc(100% - 20px));
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      z-index: 1500;
-    }
-    .sticky-btn {
-      height: 42px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      background: rgba(255,255,255,0.95);
-      color: #333;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(6px);
-    }
-    .sticky-btn.primary {
-      background: #222;
-      color: #fff;
-      border-color: #222;
-    }
-
-    #rsvpSection { scroll-margin-top: 16px; }
-
-    @media (max-width: 380px) {
-      .btn-grid-3 { grid-template-columns: 1fr; }
-      .btn-grid-2 { grid-template-columns: 1fr; }
-      .btn { padding: 12px; }
-      .sticky-btn { font-size: 11px; }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="wrap">
-    
-    <section class="hero fade-in">
-      <div class="hero-text-area">
-        <div class="date-text font-serif">2026 / 05 / 23</div>
-        <div class="names font-serif">신동윤 <span style="font-size:16px; color:#ccc; vertical-align:middle; margin:0 6px;">&</span> 신지연</div>
-        <div style="font-size: 14px; color: #888; letter-spacing: 1px; margin-top: 10px;">결혼식에 초대합니다</div>
-      </div>
-      <div class="main-photo-frame">
-        <img src="main.jpg" alt="신랑 신부 메인 사진" onclick="openModal(this.src)" class="main-photo">
-      </div>
-      <div class="parents-area">
-        <div class="parent-row">
-          <div class="p-names">故신양철 · 여현주<span class="relation">의 아들</span></div>
-          <div class="me font-serif">신동윤</div>
-        </div>
-        <div style="width:1px; height:30px; background:#e0e0e0; margin: 0 25px;"></div>
-        <div class="parent-row bride">
-          <div class="p-names">신응호 · 남순희<span class="relation">의 딸</span></div>
-          <div class="me font-serif">신지연</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="info-section fade-in">
-      <span class="section-label">Date & Venue</span>
-
-      <div class="info-group">
-        <div class="info-title font-serif">2026. 05. 23. 토 PM 6:30</div>
-        <div class="info-desc">
-          입장은 오후 5:45부터 가능합니다.<br>
-          연회장 식사는 오후 6:00 ~ 8:00 입니다.
-        </div>
-        <div class="btn-grid-2">
-          <a id="gcalLink" class="btn" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24"><path d="M12 22C17.5 22 22 17.5 22 12C22 11.1 21.9 10.2 21.7 9.4H12V13.5H17.7C17.5 14.9 16.6 16.1 15.3 17C14.4 17.6 13.2 18 12 18C8.7 18 6 15.3 6 12C6 8.7 8.7 6 12 6C13.6 6 15 6.6 16.1 7.6L19 4.8C17.2 3.1 14.8 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path></svg>
-            구글 캘린더 등록
-          </a>
-          <a id="icsLink" class="btn" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            폰 캘린더(다운 후 등록)
-          </a>
-        </div>
-      </div>
-
-      <div class="divider-line" style="margin: 40px 0;"></div>
-
-      <div class="info-group" style="margin-bottom: 0;">
-        <div class="info-title font-serif">남산예술원 웨딩홀</div>
-        <div class="info-desc">서울특별시 용산구 소월로 375</div>
-
-        <div class="btn-grid-3">
-          <a id="naverNav" class="btn" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 8V16L16 8V16"></path></svg>
-            네이버지도
-          </a>
-          <button class="btn" onclick="copyAddress('서울특별시 용산구 소월로 375')">
-            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            주소복사
-          </button>
-          <a id="kakaoNav" class="btn" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24"><path d="M12 4C7 4 3 7.1 3 11C3 13.5 4.6 15.7 7 16.9L6 20.5L9.7 18.2C10.4 18.3 11.2 18.4 12 18.4C17 18.4 21 15.3 21 11.4C21 7.4 17 4 12 4Z"></path></svg>
-            카카오맵
-          </a>
-        </div>
-
-        <div class="venue-notice-list">
-          <div class="venue-notice-item">🚗 주차 가능 · 무료 / 약 150대 가능 / 발렛 아님</div>
-          <div class="venue-notice-item">🚪 예식장 입구가 주차장과 바로 연결됩니다</div>
-          <div class="venue-notice-item strong">🎫 입장 시 청첩장을 보여주셔야 합니다</div>
-          <div class="venue-notice-item strong">📌 예식장 정책상 화환은 정중히 사양합니다</div>
-          <div class="venue-notice-item">🚌 한강진역 1번 출구 셔틀버스 (예식 1시간 전부터 / 10~15분 간격)</div>
-          <div class="venue-notice-item">🏧 예식장 내 별도 현금인출기(ATM)가 없습니다</div>
-        </div>
-
-        <div id="routeSection" class="route-card">
-          <div class="route-title">오시는 길</div>
-
-          <div class="route-block">
-            <div class="route-sub">지하철 (6호선 한강진역)</div>
-            <div class="route-text">
-              • 1번 출구 → 무료 셔틀버스 (예식 1시간 전부터 운행 / 10~15분 간격)<br>
-              • 1번 출구 → 도보 10분 (약 560m)<br>
-              &nbsp;&nbsp;계단 2회 / 오르막 경사 있습니다
-            </div>
-          </div>
-
-          <div class="route-block">
-            <div class="route-sub">버스 (예식장 인근 정류장)</div>
-            <div class="route-text">
-              • 남산맨션아파트, 남산예술원 (03159)<br>
-              &nbsp;&nbsp;402, 405 / 도보 5분<br><br>
-
-              • 장충단로입구 (03158)<br>
-              &nbsp;&nbsp;142, 144, 402, 405, 420, 6211 / 도보 7분<br><br>
-
-              • 한강진역.블루스퀘어 (03196 / 03197)<br>
-              &nbsp;&nbsp;110B, 400, 405<br><br>
-
-              • 서울중부기술교육원.블루스퀘어 (03160 / 03161)<br>
-              &nbsp;&nbsp;142, 144, 402, 420, 6211, 3011
-            </div>
-          </div>
-
-          <div class="route-block">
-            <div class="route-sub">환승 안내 (지하철 → 버스)</div>
-            <div class="route-text">
-              • 2호선 신당역 7번 출구 → 6211, 142<br>
-              • 3호선 약수역 8번 출구 → 144, 142<br>
-              • 5호선 청구역 1번 출구 → 142
-            </div>
-          </div>
-
-          <div class="route-map-wrap">
-            <div class="route-sub">약도</div>
-            <div class="route-map-caption">한강진역 / 블루스퀘어 기준 약도입니다.</div>
-            <img
-              src="https://contents.sixshop.com/thumbnails/uploadedFiles/113572/default/image_1741324921386_1500.jpg"
-              alt="남산예술원 웨딩홀 약도"
-              class="route-map-img"
-              loading="lazy"
-              onclick="openModal(this.src)"
-            >
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="rsvpSection" class="fade-in" style="background: #fff; padding-bottom: 80px;">
-      <span class="section-label-ko" style="margin-bottom: 5px;">정성껏 준비하겠습니다</span>
-      <h2 class="font-serif" style="font-size: 19px; margin-bottom: 40px; font-weight: 700; color: #1a1a1a;">참석 정보를 알려주세요</h2>
-      <p class="rsvp-deadline">식사 및 좌석 준비를 위해 <b>5월 10일(일)</b>까지 회신 부탁드립니다.</p>
-
-      <div class="rsvp-container">
-        <div class="rsvp-input-group">
-          <label class="rsvp-label" for="name">성함</label>
-          <input id="name" placeholder="성함을 입력해주세요" maxlength="20" autocomplete="name">
-        </div>
-
-        <div class="rsvp-input-group">
-          <label class="rsvp-label" for="phone">휴대폰 번호</label>
-          <input id="phone" type="tel" inputmode="numeric" placeholder="010-0000-0000" maxlength="13" autocomplete="tel">
-        </div>
-
-        <div class="rsvp-input-group">
-          <label class="rsvp-label" for="side">구분</label>
-          <select id="side" style="color: #666;">
-            <option value="" disabled selected>선택해 주세요</option>
-            <option value="신랑측">신랑측</option>
-            <option value="신부측">신부측</option>
-          </select>
-        </div>
-
-        <div class="rsvp-input-group">
-          <label class="rsvp-label" for="guestCount">참석 인원 (본인 포함)</label>
-          <select id="guestCount" style="color: #666;">
-            <option value="" disabled selected>인원 선택</option>
-            <option value="1">1명 (혼자 참석합니다)</option>
-            <option value="2">2명 (동반인 1명)</option>
-            <option value="3">3명 (동반인 2명)</option>
-            <option value="4">4명 (동반인 3명)</option>
-            <option value="5">5명 (동반인 4명)</option>
-            <option value="6">6명 (동반인 5명)</option>
-            <option value="7">7명 (동반인 6명)</option>
-            <option value="8">8명 (동반인 7명)</option>
-            <option value="9">9명 (동반인 8명)</option>
-            <option value="10+">10명 이상</option>
-          </select>
-        </div>
-
-        <div class="rsvp-input-group" id="companionGroup" style="display:none;">
-          <label class="rsvp-label" for="companionNames">동반인 성함 (선택)</label>
-          <input id="companionNames" placeholder="예: 홍길동, 김영희" maxlength="50">
-        </div>
-
-        <button id="submitBtn" class="btn-submit" onclick="submitRsvp()">참석 소식 전하기</button>
-
-        <p class="privacy-notice">
-          * 전달하신 정보는 식사 및 좌석 준비를 위해 사용되며, 예식 종료 후 파기합니다.<br>
-          * 제3자 제공 없이 예식 준비 목적으로만 사용합니다.
-        </p>
-      </div>
-    </section>
-
-    <section class="poem-section fade-in" style="background: #fafafa;">
-      <span class="section-label">Invitation</span>
-      <div class="poem-wrap font-serif">
-신중한 지연은 느긋합니다.
-빠릿한 동윤은 서두릅니다.
-속도가 다른 둘이 만났습니다.
-결혼 준비하며 참 많이도 아웅다웅했습니다.
-
-지연은 강아지를 좋아합니다.
-동윤은 고양이를 키우고 있습니다.
-기꺼이 고양이를 가족으로 맞이합니다.
-
-다행히 가리는 음식이 별로 없습니다.
-이왕이면 상대가 좋아하는 걸 함께 즐깁니다.
-늘 메뉴 선택을 미루는 부작용이 생깁니다.
-
-좋아하는 취미가 같습니다.
-테니스를 치다가 만났습니다.
-함께 땀 흘리며 호흡하는 재미가 있습니다.
-
-삶의 속도도, 사랑의 방식도
-다른 둘이 만났습니다.
-
-“자유는 ‘자기의 이유’로 살아가는 것”이라고 했습니다.
-너무나 다른 서로의 존재를
-삶의 이유로 받아들이기로 했습니다.
-자유로운 가정을 이루고자 합니다.
-
-희로애락을 겪는 모든 과정에서
-외롭지 않도록 곁을 지키겠단 다짐,
-여러분과 함께 나누고 싶습니다.
-
-이 약속의 증인이 되어 주시길 바랍니다.
-감사합니다.
-      </div>
-    </section>
-
-    <section class="fade-in" style="padding: 0 0 40px;">
-      <div class="gallery-grid">
-        <img src="1.jpg" alt="웨딩 사진 1" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="2.jpg" alt="웨딩 사진 2" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="3.jpg" alt="웨딩 사진 3" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="4.jpg" alt="웨딩 사진 4" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="5.jpg" alt="웨딩 사진 5" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="6.jpg" alt="웨딩 사진 6" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="7.jpg" alt="웨딩 사진 7" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="8.jpg" alt="웨딩 사진 8" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-        <img src="9.jpg" alt="웨딩 사진 9" onclick="openModal(this.src)" class="gallery-img" loading="lazy">
-      </div>
-      <div style="margin-top: 25px; text-align: center;">
-        <a href="https://photos.app.goo.gl/mJmxhc6hSy7y4ujA9" target="_blank" rel="noopener noreferrer" class="btn" style="display: inline-flex; width: auto; padding: 9px 18px; border-radius: 4px; border: 1px solid #ddd; background: #fff; color: #888; font-size: 12px; letter-spacing: 0.2px; text-decoration: none; transition: all 0.2s ease;">
-          더 많은 사진 보기
-          <svg viewBox="0 0 24 24" style="width: 12px; height: 12px; margin-left: 5px; stroke: #aaa; stroke-width: 1.5;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        </a>
-      </div>
-    </section>
-
-    <section class="account-section fade-in">
-      <h2 class="acc-header-title">축하와 응원,<br>감사히 받겠습니다</h2>
-
-      <div class="account-box">
-        <div class="acc-row">
-          <div>
-            <span class="acc-label">GROOM</span>
-            <span class="acc-info"><b>신동윤</b> 신한 110-515-863488</span>
-          </div>
-          <button class="btn-copy" onclick="copyTextDirect('110515863488')">복사</button>
-        </div>
-      </div>
-
-      <div class="account-box">
-        <div class="acc-row">
-          <div>
-            <span class="acc-label">BRIDE</span>
-            <span class="acc-info"><b>신지연</b> 국민 512-602-01-208841</span>
-          </div>
-          <button class="btn-copy" onclick="copyTextDirect('51260201208841')">복사</button>
-        </div>
-      </div>
-    </section>
-
-    <footer style="padding: 60px 20px; text-align: center; color: #ccc; font-size: 11px; letter-spacing: 2px; line-height: 1.8;">
-      THE WEDDING DAY<br>SHIN DONG YOON & SHIN JI YEON
-    </footer>
-  </div>
-
-  <div class="sticky-actions">
-    <a href="#routeSection" class="sticky-btn">오시는 길</a>
-    <a href="#rsvpSection" class="sticky-btn primary">참석 회신</a>
-    <a id="stickyMapBtn" href="#" class="sticky-btn" target="_blank" rel="noopener noreferrer">길찾기</a>
-  </div>
-
-  <div id="imageModal" class="modal" onclick="closeModal()">
-    <span class="modal-close">×</span>
-    <img class="modal-img" id="fullImage" alt="확대 이미지" onclick="event.stopPropagation()">
-  </div>
-
-  <div id="toast" class="toast" aria-live="polite"></div>
-
-  <script>
-    var EVENT = {
-      title: "신지연·신동윤 결혼식",
-      startISO: "20260523T183000",
-      endISO: "20260523T203000",
-      locationName: "남산예술원 웨딩홀",
-      address: "서울특별시 용산구 소월로 375"
-    };
-
-    document.addEventListener("DOMContentLoaded", function() {
-      var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-          if (entry.isIntersecting) entry.target.classList.add("visible");
-        });
-      }, { threshold: 0.1 });
-
-      document.querySelectorAll('.fade-in').forEach(function(el) {
-        observer.observe(el);
-      });
-
-      ['guestCount', 'side'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('change', function() {
-          this.style.color = '#333';
-        });
-      });
-
-      document.getElementById('guestCount').addEventListener('change', toggleCompanionField);
-
-      initLinks();
+  } catch (err) {
+    return jsonOutput_({
+      success: false,
+      message: "서버 오류",
+      error: String(err)
     });
+  }
+}
 
-    document.getElementById('name').addEventListener('input', function(e) {
-      e.target.value = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s\-\.]/g, '');
-    });
-
-    document.getElementById('companionNames').addEventListener('input', function(e) {
-      e.target.value = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s,\-·\.]/g, '');
-    });
-
-    document.getElementById('phone').addEventListener('input', function (e) {
-      var val = e.target.value.replace(/[^0-9]/g, '');
-      var result = '';
-      if (val.length < 4) result = val;
-      else if (val.length < 7) result = val.substr(0, 3) + '-' + val.substr(3);
-      else if (val.length < 11) result = val.substr(0, 3) + '-' + val.substr(3, 3) + '-' + val.substr(6);
-      else result = val.substr(0, 3) + '-' + val.substr(3, 4) + '-' + val.substr(7);
-      e.target.value = result;
-    });
-
-    function toggleCompanionField() {
-      var count = document.getElementById('guestCount').value;
-      var group = document.getElementById('companionGroup');
-      var companion = document.getElementById('companionNames');
-
-      if (!group || !companion) return;
-
-      if (count && count !== '1') {
-        group.style.display = 'block';
-      } else {
-        group.style.display = 'none';
-        companion.value = '';
-      }
-    }
-
-    function toast(msg) {
-      var el = document.getElementById("toast");
-      el.textContent = msg;
-      el.style.display = "block";
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(function () {
-        el.style.display = "none";
-      }, 2200);
-    }
-
-    function copyAddress(txt) {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(txt).then(function() {
-          toast("주소가 복사되었습니다");
-        }).catch(function() {
-          fallbackCopyAddress(txt);
-        });
-      } else {
-        fallbackCopyAddress(txt);
-      }
-    }
-
-    function fallbackCopyAddress(txt) {
-      var t = document.createElement('textarea');
-      t.value = txt;
-      t.style.position = 'fixed';
-      t.style.left = '-9999px';
-      document.body.appendChild(t);
-      t.focus();
-      t.select();
-      try {
-        document.execCommand('copy');
-        toast("주소가 복사되었습니다");
-      } catch(e) {
-        toast("복사에 실패했습니다");
-      }
-      document.body.removeChild(t);
-    }
-
-    function copyTextDirect(txt) {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(txt).then(function() {
-          toast("계좌번호가 복사되었습니다");
-        }).catch(function() {
-          fallbackCopyText(txt);
-        });
-      } else {
-        fallbackCopyText(txt);
-      }
-    }
-
-    function fallbackCopyText(txt) {
-      var t = document.createElement('textarea');
-      t.value = txt;
-      t.style.position = 'fixed';
-      t.style.left = '-9999px';
-      document.body.appendChild(t);
-      t.focus();
-      t.select();
-      try {
-        document.execCommand('copy');
-        toast("계좌번호가 복사되었습니다");
-      } catch(e) {
-        toast("복사에 실패했습니다");
-      }
-      document.body.removeChild(t);
-    }
-
-    function submitRsvp() {
-      var name = document.getElementById("name").value.trim();
-      var phone = document.getElementById("phone").value.trim();
-      var side = document.getElementById("side").value;
-      var count = document.getElementById("guestCount").value;
-      var companionNames = document.getElementById("companionNames").value.trim();
-      var btn = document.getElementById("submitBtn");
-
-      var phoneRegex = /^01[016789]-\d{3,4}-\d{4}$/;
-
-      if (name.length < 1) return toast("성함을 입력해 주세요");
-      if (!phoneRegex.test(phone)) return toast("연락처를 정확히 입력해 주세요");
-      if (!side) return toast("신랑측/신부측을 선택해 주세요");
-      if (!count) return toast("참석 인원을 선택해 주세요");
-
-      btn.disabled = true;
-      btn.textContent = "전송 중...";
-
-      var scriptUrl = "https://script.google.com/macros/s/AKfycbwbdYeAJQ9AWCJH89Y3enM91-AzcLg1sRONhmfINcAxxHTas852KtV5EMcWkqFZCJjm-Q/exec";
-
-      fetch(scriptUrl, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          name: name,
-          phone: phone,
-          side: side,
-          guestCount: count,
-          companionNames: companionNames
-        })
-      })
-      .then(function() {
-        toast("접수 요청이 전송되었습니다");
-
-        document.getElementById("name").value = "";
-        document.getElementById("phone").value = "";
-        document.getElementById("side").value = "";
-        document.getElementById("side").style.color = "#666";
-        document.getElementById("guestCount").value = "";
-        document.getElementById("guestCount").style.color = "#666";
-        document.getElementById("companionNames").value = "";
-        document.getElementById("companionGroup").style.display = "none";
-      })
-      .catch(function(error) {
-        console.error(error);
-        toast("전송에 실패했습니다. 잠시 후 다시 시도해 주세요");
-      })
-      .finally(function() {
-        btn.disabled = false;
-        btn.textContent = "참석 소식 전하기";
-      });
-    }
-
-    function escapeICS(str) {
-      return String(str)
-        .replace(/\\/g, "\\\\")
-        .replace(/\n/g, "\\n")
-        .replace(/,/g, "\\,")
-        .replace(/;/g, "\\;");
-    }
-
-    function initLinks() {
-      var navQuery = encodeURIComponent(EVENT.locationName);
-
-      document.getElementById("kakaoNav").href = "https://map.kakao.com/link/search/" + navQuery;
-      document.getElementById("naverNav").href = "https://map.naver.com/v5/search/" + navQuery;
-      document.getElementById("stickyMapBtn").href = document.getElementById("naverNav").href;
-
-      var gcalDetails = [
-        "입장: 오후 5:45부터",
-        "연회장 식사: 오후 6:00 ~ 8:00",
-        "주차: 무료 / 약 150대 가능 / 발렛 아님",
-        "입장 정책: 청첩장 제시 필요",
-        "화환: 예식장 정책상 불가",
-        "셔틀: 한강진역 1번 출구 (예식 1시간 전부터 / 10~15분 간격)",
-        "ATM: 예식장 내 별도 현금인출기 없음"
-      ].join("\n");
-
-      var gcal =
-        "https://calendar.google.com/calendar/render?action=TEMPLATE" +
-        "&text=" + encodeURIComponent(EVENT.title) +
-        "&dates=" + EVENT.startISO + "/" + EVENT.endISO +
-        "&location=" + encodeURIComponent(EVENT.locationName + " (" + EVENT.address + ")") +
-        "&details=" + encodeURIComponent(gcalDetails) +
-        "&ctz=Asia/Seoul";
-
-      document.getElementById("gcalLink").href = gcal;
-
-      var eventDesc = [
-        "장소: 남산예술원 웨딩홀 (" + EVENT.address + ")",
-        "입장: 오후 5:45부터",
-        "연회장 식사: 오후 6:00 ~ 8:00",
-        "주차: 무료 / 약 150대 가능 / 발렛 아님",
-        "입장 정책: 청첩장 제시 필요",
-        "화환: 예식장 정책상 불가",
-        "셔틀: 한강진역 1번 출구 (예식 1시간 전부터 / 10~15분 간격)",
-        "ATM: 예식장 내 별도 현금인출기 없음"
-      ].join("\n");
-
-      var icsData =
-        "BEGIN:VCALENDAR\r\n" +
-        "VERSION:2.0\r\n" +
-        "PRODID:-//Wedding Invite//KR//KO\r\n" +
-        "BEGIN:VEVENT\r\n" +
-        "SUMMARY:" + escapeICS(EVENT.title) + "\r\n" +
-        "DTSTART;TZID=Asia/Seoul:20260523T183000\r\n" +
-        "DTEND;TZID=Asia/Seoul:20260523T203000\r\n" +
-        "LOCATION:" + escapeICS(EVENT.locationName + " (" + EVENT.address + ")") + "\r\n" +
-        "DESCRIPTION:" + escapeICS(eventDesc) + "\r\n" +
-        "END:VEVENT\r\n" +
-        "END:VCALENDAR";
-
-      var blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
-      document.getElementById("icsLink").href = URL.createObjectURL(blob);
-      document.getElementById("icsLink").download = "wedding.ics";
-    }
-
-    function openModal(src) {
-      document.getElementById("imageModal").style.display = "flex";
-      document.getElementById("fullImage").src = src;
-      document.body.style.overflow = "hidden";
-    }
-
-    function closeModal() {
-      document.getElementById("imageModal").style.display = "none";
-      document.body.style.overflow = "auto";
-    }
-  </script>
-</body>
-</html>
+/**
+ * JSON 응답 헬퍼
+ */
+function jsonOutput_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
