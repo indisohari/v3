@@ -29,7 +29,7 @@
       max-width: 500px;
       margin: 0 auto;
       background: #fff;
-      padding-bottom: 120px; /* 하단 고정 버튼 공간 확보 */
+      padding-bottom: 120px;
       box-shadow: 0 0 30px rgba(0,0,0,0.02);
       min-height: 100vh;
     }
@@ -70,7 +70,7 @@
     .info-section { background: #fafafa; padding: 50px 25px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
     .info-group { margin-bottom: 30px; }
     .info-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #222; letter-spacing: 0.5px; }
-    .info-desc { font-size: 14px; color: #666; font-weight: 300; margin-bottom: 15px; }
+    .info-desc { font-size: 14px; color: #666; font-weight: 300; margin-bottom: 15px; line-height: 1.6; }
 
     .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 380px; margin: 0 auto; }
     .btn-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; max-width: 380px; margin: 0 auto; }
@@ -98,7 +98,6 @@
 
     .divider-line { width: 100%; height: 1px; background: #eee; margin: 30px 0; }
 
-    /* [추가] 장소 안내/오시는 길 카드 */
     .venue-notice-list {
       margin-top: 14px;
       text-align: left;
@@ -153,6 +152,25 @@
       color: #555;
       line-height: 1.65;
       word-break: keep-all;
+    }
+
+    .route-map-wrap {
+      margin-top: 12px;
+      border-top: 1px dashed #eee;
+      padding-top: 12px;
+    }
+    .route-map-caption {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .route-map-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #eee;
+      display: block;
+      background: #fff;
     }
 
     .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
@@ -241,7 +259,6 @@
       box-sizing: border-box;
     }
 
-    /* [추가] 하단 고정 버튼 */
     .sticky-actions {
       position: fixed;
       left: 50%;
@@ -314,7 +331,10 @@
 
       <div class="info-group">
         <div class="info-title font-serif">2026. 05. 23. 토 PM 6:30</div>
-        <div class="info-desc">식사는 오후 5:30부터 가능합니다.</div>
+        <div class="info-desc">
+          입장은 오후 5:45부터 가능합니다.<br>
+          연회장 식사는 오후 6:00 ~ 8:00 입니다.
+        </div>
         <div class="btn-grid-2">
           <a id="gcalLink" class="btn" target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 24 24"><path d="M12 22C17.5 22 22 17.5 22 12C22 11.1 21.9 10.2 21.7 9.4H12V13.5H17.7C17.5 14.9 16.6 16.1 15.3 17C14.4 17.6 13.2 18 12 18C8.7 18 6 15.3 6 12C6 8.7 8.7 6 12 6C13.6 6 15 6.6 16.1 7.6L19 4.8C17.2 3.1 14.8 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path></svg>
@@ -348,12 +368,13 @@
           </a>
         </div>
 
-        <!-- [추가] 장소 실전 안내 -->
         <div class="venue-notice-list">
-          <div class="venue-notice-item">🚗 주차 가능 · 무료 / 발렛 아님 / 예식장 입구가 주차장입니다</div>
-          <div class="venue-notice-item strong">🎫 청첩장을 보여주셔야 입장 가능합니다</div>
+          <div class="venue-notice-item">🚗 주차 가능 · 무료 / 약 150대 가능 / 발렛 아님</div>
+          <div class="venue-notice-item">🚪 예식장 입구가 주차장과 바로 연결됩니다</div>
+          <div class="venue-notice-item strong">🎫 입장 시 청첩장을 보여주셔야 합니다</div>
           <div class="venue-notice-item strong">📌 예식장 정책상 화환은 정중히 사양합니다</div>
-          <div class="venue-notice-item">🚌 한강진역 1번 출구에서 무료 셔틀버스 운행 (예식 당일)</div>
+          <div class="venue-notice-item">🚌 한강진역 1번 출구 셔틀버스 (예식 1시간 전부터 / 10~15분 간격)</div>
+          <div class="venue-notice-item">🏧 예식장 내 별도 현금인출기(ATM)가 없습니다</div>
         </div>
 
         <div id="routeSection" class="route-card">
@@ -362,7 +383,7 @@
           <div class="route-block">
             <div class="route-sub">지하철 (6호선 한강진역)</div>
             <div class="route-text">
-              • 1번 출구 → 무료 셔틀버스 (예식 당일 운행)<br>
+              • 1번 출구 → 무료 셔틀버스 (예식 1시간 전부터 운행 / 10~15분 간격)<br>
               • 1번 출구 → 도보 10분 (약 560m)<br>
               &nbsp;&nbsp;계단 2회 / 오르막 경사 있습니다
             </div>
@@ -373,8 +394,15 @@
             <div class="route-text">
               • 남산맨션아파트, 남산예술원 (03159)<br>
               &nbsp;&nbsp;402, 405 / 도보 5분<br><br>
+
               • 장충단로입구 (03158)<br>
-              &nbsp;&nbsp;142, 144, 402, 405, 420, 6211 / 도보 7분
+              &nbsp;&nbsp;142, 144, 402, 405, 420, 6211 / 도보 7분<br><br>
+
+              • 한강진역.블루스퀘어 (03196 / 03197)<br>
+              &nbsp;&nbsp;110B, 400, 405<br><br>
+
+              • 서울중부기술교육원.블루스퀘어 (03160 / 03161)<br>
+              &nbsp;&nbsp;142, 144, 402, 420, 6211, 3011
             </div>
           </div>
 
@@ -385,6 +413,18 @@
               • 3호선 약수역 8번 출구 → 144, 142<br>
               • 5호선 청구역 1번 출구 → 142
             </div>
+          </div>
+
+          <div class="route-map-wrap">
+            <div class="route-sub">약도</div>
+            <div class="route-map-caption">한강진역 / 블루스퀘어 기준 약도입니다.</div>
+            <img
+              src="https://contents.sixshop.com/thumbnails/uploadedFiles/113572/default/image_1741324921386_1500.jpg"
+              alt="남산예술원 웨딩홀 약도"
+              class="route-map-img"
+              loading="lazy"
+              onclick="openModal(this.src)"
+            >
           </div>
         </div>
       </div>
@@ -532,20 +572,17 @@
     </footer>
   </div>
 
-  <!-- 하단 고정 버튼 -->
   <div class="sticky-actions">
     <a href="#routeSection" class="sticky-btn">오시는 길</a>
     <a href="#rsvpSection" class="sticky-btn primary">참석 회신</a>
     <a id="stickyMapBtn" href="#" class="sticky-btn" target="_blank" rel="noopener noreferrer">길찾기</a>
   </div>
 
-  <!-- 이미지 모달 -->
   <div id="imageModal" class="modal" onclick="closeModal()">
     <span class="modal-close">×</span>
     <img class="modal-img" id="fullImage" alt="확대 이미지" onclick="event.stopPropagation()">
   </div>
 
-  <!-- 토스트 -->
   <div id="toast" class="toast" aria-live="polite"></div>
 
   <script>
@@ -581,17 +618,14 @@
       initLinks();
     });
 
-    // 성함 입력: 한글/자모/영문/공백/하이픈/점만 허용
     document.getElementById('name').addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s\-\.]/g, '');
     });
 
-    // 동반인 성함 입력: 한글/영문/공백/쉼표/가운뎃점/하이픈 허용
     document.getElementById('companionNames').addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s,\-·\.]/g, '');
     });
 
-    // 휴대폰 자동 하이픈
     document.getElementById('phone').addEventListener('input', function (e) {
       var val = e.target.value.replace(/[^0-9]/g, '');
       var result = '';
@@ -703,10 +737,8 @@
       btn.disabled = true;
       btn.textContent = "전송 중...";
 
-      // [중요] 본인의 Apps Script URL
       var scriptUrl = "https://script.google.com/macros/s/AKfycbwbdYeAJQ9AWCJH89Y3enM91-AzcLg1sRONhmfINcAxxHTas852KtV5EMcWkqFZCJjm-Q/exec";
 
-      // 호환성 우선(no-cors): 프론트에서 서버 성공/실패를 확정 판별할 수 없음
       fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -757,11 +789,13 @@
       document.getElementById("stickyMapBtn").href = document.getElementById("naverNav").href;
 
       var gcalDetails = [
-        "식사: 오후 5:30부터",
-        "주차: 가능 / 무료 / 발렛 아님",
-        "입장: 청첩장 제시 필요",
+        "입장: 오후 5:45부터",
+        "연회장 식사: 오후 6:00 ~ 8:00",
+        "주차: 무료 / 약 150대 가능 / 발렛 아님",
+        "입장 정책: 청첩장 제시 필요",
         "화환: 예식장 정책상 불가",
-        "셔틀: 한강진역 1번 출구 (예식 당일)"
+        "셔틀: 한강진역 1번 출구 (예식 1시간 전부터 / 10~15분 간격)",
+        "ATM: 예식장 내 별도 현금인출기 없음"
       ].join("\n");
 
       var gcal =
@@ -776,11 +810,13 @@
 
       var eventDesc = [
         "장소: 남산예술원 웨딩홀 (" + EVENT.address + ")",
-        "식사: 오후 5:30부터",
-        "주차: 가능 / 무료 / 발렛 아님",
-        "입장: 청첩장 제시 필요",
+        "입장: 오후 5:45부터",
+        "연회장 식사: 오후 6:00 ~ 8:00",
+        "주차: 무료 / 약 150대 가능 / 발렛 아님",
+        "입장 정책: 청첩장 제시 필요",
         "화환: 예식장 정책상 불가",
-        "셔틀: 한강진역 1번 출구 (예식 당일)"
+        "셔틀: 한강진역 1번 출구 (예식 1시간 전부터 / 10~15분 간격)",
+        "ATM: 예식장 내 별도 현금인출기 없음"
       ].join("\n");
 
       var icsData =
